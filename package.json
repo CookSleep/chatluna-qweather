@@ -1,7 +1,7 @@
 {
     "name": "koishi-plugin-chatluna-qweather",
     "description": "为 ChatLuna 提供和风天气查询工具，支持城市搜索、天气预报、分钟级降水和空气质量",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "homepage": "https://github.com/CookSleep/chatluna-qweather",
     "repository": {
         "type": "git",
