@@ -1,6 +1,7 @@
 name: Publish Package
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*'
@@ -27,5 +28,7 @@ jobs:
           node --version
           npm --version
 
-      - name: Publish to npm (Trusted Publishing via OIDC)
-        run: npm publish --access public --provenance
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
