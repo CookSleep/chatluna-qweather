@@ -55,21 +55,13 @@ export const Config: Schema<Config> = Schema.intersect([
         authType: Schema.union([
             Schema.const('apiKey').description('API KEY'),
             Schema.const('jwt').description('JWT')
-        ]).default('jwt').description('认证方式')
+        ]).default('jwt').description('认证方式'),
+        apiKey: Schema.string().role('secret').default('').description('选择 API KEY 认证时填写。API KEY 固定通过请求头 `X-QW-Api-Key` 发送'),
+        jwtKeyId: Schema.string().default('').description('选择 JWT 认证时填写。JWT 凭据 ID，即 Header 中的 `kid`，在凭据详情页获取'),
+        jwtProjectId: Schema.string().default('').description('选择 JWT 认证时填写。JWT 项目 ID，即 Payload 中的 `sub`，在项目详情页获取'),
+        jwtPrivateKey: Schema.string().role('textarea').role('secret').default('').description('选择 JWT 认证时填写。Ed25519 私钥 PEM，插件会用它自动生成 Bearer JWT'),
+        jwtTtlSeconds: Schema.number().default(900).min(60).max(86400).description('JWT 有效期（秒），最长 86400 秒')
     }).description('和风天气认证'),
-    Schema.union([
-        Schema.object({
-            authType: Schema.const('apiKey').required(),
-            apiKey: Schema.string().role('secret').default('').description('和风天气 API KEY')
-        }).description('API KEY 配置'),
-        Schema.object({
-            authType: Schema.const('jwt').required(),
-            jwtKeyId: Schema.string().default('').description('JWT 凭据 ID，即 Header 中的 `kid`，在凭据详情页获取'),
-            jwtProjectId: Schema.string().default('').description('JWT 项目 ID，即 Payload 中的 `sub`，在项目详情页获取'),
-            jwtPrivateKey: Schema.string().role('textarea').role('secret').default('').description('Ed25519 私钥 PEM，插件会用它自动生成 Bearer JWT'),
-            jwtTtlSeconds: Schema.number().default(900).min(60).max(86400).description('JWT 有效期（秒），最长 86400 秒')
-        }).description('JWT 配置')
-    ]),
     Schema.object({
         lang: Schema.string().default('zh').description('和风天气多语言代码，例如 `zh`、`en`、`ja`'),
         unit: Schema.union([
@@ -141,6 +133,9 @@ export const usage = `## chatluna-qweather
 - \`hours\`：可选，逐小时预报小时数。
 - \`limit\`：可选，限制返回的预报条数。
 
+### 数据缓存
+插件不会缓存 GeoAPI、城市、经纬度、天气或空气质量响应，每次工具调用都会重新请求和风天气接口，以避免违反和风天气 ToS 中关于 Geo 数据缓存与再分发的限制。插件仅会在内存中短期复用 JWT Token，不包含任何地理或天气数据。
+
 ### 认证
 请先在[**和风天气控制台**](https://console.qweather.com/setting)查看你的 API Host，并在 API KEY 和 JWT 中选择一种认证方式。
 
@@ -157,7 +152,20 @@ export const usage = `## chatluna-qweather
 ### API KEY 限制提醒
 和风天气正在将身份认证方式从 API KEY 逐步迁移到 JWT。自 2027 年 2 月 1 日起，API KEY 每日请求量将限制为 1000 次，JWT 不受该限制。
 
-超过 API KEY 每日限制后，接口可能返回 403 或 429；若超限后仍大量请求，可能触发 IP 封禁或账号冻结。建议优先使用 JWT 认证。`
+超过 API KEY 每日限制后，接口可能返回 403 或 429；若超限后仍大量请求，可能触发 IP 封禁或账号冻结。建议优先使用 JWT 认证。
+
+### 价格参考
+以下价格适用于和风天气“天气和基础服务”，覆盖天气预报、分钟预报、预警、天气指数、空气质量、时光机、GeoAPI、天文、控制台 API。
+
+| 请求量（每月） | 价格（每次请求） |
+| --- | --- |
+| 0~5 万 | CNY 0 |
+| 之后的 95 万 | CNY 0.0007 |
+| 之后的 400 万 | CNY 0.0005 |
+| 之后的 500 万 | CNY 0.00035 |
+| 之后的 4000 万 | CNY 0.00015 |
+| 之后的 5000 万 | CNY 0.0001 |
+| 超过 1 亿 | [联系官方](https://www.qweather.com/contact/) |`
 
 export const inject = {
     required: ['chatluna']
