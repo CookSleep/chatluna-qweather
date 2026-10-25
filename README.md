@@ -3,7 +3,7 @@
 # ChatLuna QWeather
 
 [![npm](https://img.shields.io/npm/v/koishi-plugin-chatluna-qweather?style=flat-square)](https://www.npmjs.com/package/koishi-plugin-chatluna-qweather)
-[![License](https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square)](package.json)
+[![License](https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square)](LICENSE)
 
 **让 ChatLuna 查和风天气**
 
@@ -114,7 +114,7 @@ npm install koishi-plugin-chatluna-qweather
 
 ## 📄 许可
 
-本项目以 GPL-3.0 许可发布（见 [`package.json`](package.json) 的 `license` 字段）。
+本项目基于 [GPL-3.0](LICENSE) 开源。
 
 ## 🙏 致谢
 
