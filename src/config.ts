@@ -60,7 +60,7 @@ export const Config: Schema<Config> = Schema.intersect([
         jwtKeyId: Schema.string().default('').description('选择 JWT 认证时填写。JWT 凭据 ID，即 Header 中的 `kid`，在凭据详情页获取'),
         jwtProjectId: Schema.string().default('').description('选择 JWT 认证时填写。JWT 项目 ID，即 Payload 中的 `sub`，在项目详情页获取'),
         jwtPrivateKey: Schema.string().role('textarea').role('secret').default('').description('选择 JWT 认证时填写。Ed25519 私钥 PEM，插件会用它自动生成 Bearer JWT'),
-        jwtTtlSeconds: Schema.number().default(900).min(60).max(86400).description('JWT 有效期（秒），最长 86400 秒')
+        jwtTtlSeconds: Schema.number().default(900).min(300).max(86400).description('JWT 有效期（秒），300-86400 秒')
     }).description('和风天气认证'),
     Schema.object({
         lang: Schema.string().default('zh').description('和风天气多语言代码，例如 `zh`、`en`、`ja`'),

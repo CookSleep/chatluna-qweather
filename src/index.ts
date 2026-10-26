@@ -192,7 +192,7 @@ type AirDailyResponse = {
 const querySchema = z.enum(['weatherNow', 'weatherDaily', 'weatherHourly', 'minutelyPrecipitation', 'airCurrent', 'airHourly', 'airDaily'])
 
 const schema = z.object({
-    location: z.string().describe('要查询天气的城市名、LocationID 或英文逗号分隔的经度,纬度。'),
+    location: z.string().trim().min(1).describe('要查询天气的城市名、LocationID 或英文逗号分隔的经度,纬度。'),
     adm: z.string().optional().describe('可选，上级行政区，用于消除重名城市，例如“陕西”“北京”。'),
     range: z.string().optional().describe('可选，国家或地区范围，使用 ISO 3166 代码，例如“cn”“us”。'),
     queries: z.array(querySchema).optional().describe('可选，可同时查询多个类型：weatherNow、weatherDaily、weatherHourly、minutelyPrecipitation、airCurrent、airHourly、airDaily。'),
@@ -225,13 +225,14 @@ class QWeatherTool extends StructuredTool {
         _runnable: ChatLunaToolRunnable
     ) {
         const log = this.ctx.logger(name)
-            const queries = normalizeQueries(input.queries, this.cfg.defaultQueries)
-            const days = input.days || this.cfg.defaultDailyDays
-            const hours = input.hours || this.cfg.defaultHourlyHours
+        const queries = normalizeQueries(input.queries, this.cfg.defaultQueries)
+        const days = input.days || this.cfg.defaultDailyDays
+        const hours = input.hours || this.cfg.defaultHourlyHours
 
         try {
+            const inputCoordinates = parseCoordinates(input.location)
             const city = await this.get<CityLookupResponse>('/geo/v2/city/lookup', {
-                location: input.location.trim(),
+                location: inputCoordinates ? `${inputCoordinates.lon},${inputCoordinates.lat}` : input.location.trim(),
                 adm: input.adm?.trim(),
                 range: input.range?.trim(),
                 number: String(this.cfg.locationNumber),
@@ -243,78 +244,55 @@ class QWeatherTool extends StructuredTool {
             }
 
             const matched = city.location[0]
-            const coordinates = getCoordinates(input.location, matched)
-            const calls: Array<Promise<unknown>> = []
-            if (queries.includes('weatherNow')) {
-                calls.push(this.get<NowResponse>('/v7/weather/now', {
-                    location: matched.id,
-                    lang: this.cfg.lang,
-                    unit: this.cfg.unit
-                }))
+            const coordinates = inputCoordinates ?? {
+                lat: formatCoordinate(matched.lat),
+                lon: formatCoordinate(matched.lon)
             }
-            if (queries.includes('weatherDaily')) {
-                calls.push(this.get<DailyResponse>(`/v7/weather/${days}`, {
-                    location: matched.id,
-                    lang: this.cfg.lang,
-                    unit: this.cfg.unit
-                }))
-            }
-            if (queries.includes('weatherHourly')) {
-                calls.push(this.get<HourlyResponse>(`/v7/weather/${hours}`, {
-                    location: matched.id,
-                    lang: this.cfg.lang,
-                    unit: this.cfg.unit
-                }))
-            }
-            if (queries.includes('minutelyPrecipitation')) {
-                calls.push(this.get<MinutelyResponse>('/v7/minutely/5m', {
-                    location: `${coordinates.lon},${coordinates.lat}`,
-                    lang: this.cfg.lang
-                }))
-            }
-            if (queries.includes('airCurrent')) {
-                calls.push(this.get<AirCurrentResponse>(`/airquality/v1/current/${coordinates.lat}/${coordinates.lon}`, {
-                    lang: this.cfg.lang
-                }))
-            }
-            if (queries.includes('airHourly')) {
-                calls.push(this.get<AirHourlyResponse>(`/airquality/v1/hourly/${coordinates.lat}/${coordinates.lon}`, {
-                    lang: this.cfg.lang,
-                    localTime: 'true'
-                }))
-            }
-            if (queries.includes('airDaily')) {
-                calls.push(this.get<AirDailyResponse>(`/airquality/v1/daily/${coordinates.lat}/${coordinates.lon}`, {
-                    lang: this.cfg.lang,
-                    localTime: 'true'
-                }))
+            // 输入是经纬度时，天气也按该点查询，而不是退化成最近的城市。
+            const weatherLocation = inputCoordinates ? `${coordinates.lon},${coordinates.lat}` : matched.id
+            const tasks: Record<QueryType, [string, Record<string, string>]> = {
+                weatherNow: ['/v7/weather/now', { location: weatherLocation, lang: this.cfg.lang, unit: this.cfg.unit }],
+                weatherDaily: [`/v7/weather/${days}`, { location: weatherLocation, lang: this.cfg.lang, unit: this.cfg.unit }],
+                weatherHourly: [`/v7/weather/${hours}`, { location: weatherLocation, lang: this.cfg.lang, unit: this.cfg.unit }],
+                minutelyPrecipitation: ['/v7/minutely/5m', { location: `${coordinates.lon},${coordinates.lat}`, lang: this.cfg.lang }],
+                airCurrent: [`/airquality/v1/current/${coordinates.lat}/${coordinates.lon}`, { lang: this.cfg.lang }],
+                airHourly: [`/airquality/v1/hourly/${coordinates.lat}/${coordinates.lon}`, { lang: this.cfg.lang, localTime: 'true' }],
+                airDaily: [`/airquality/v1/daily/${coordinates.lat}/${coordinates.lon}`, { lang: this.cfg.lang, localTime: 'true' }]
             }
 
-            const results = await Promise.all(calls)
-            let next = 0
-            const now = queries.includes('weatherNow')
-                ? results[next++] as NowResponse
-                : undefined
-            const daily = queries.includes('weatherDaily')
-                ? results[next++] as DailyResponse
-                : undefined
-            const hourly = queries.includes('weatherHourly')
-                ? results[next++] as HourlyResponse
-                : undefined
-            const minutely = queries.includes('minutelyPrecipitation')
-                ? results[next++] as MinutelyResponse
-                : undefined
-            const airCurrent = queries.includes('airCurrent')
-                ? results[next++] as AirCurrentResponse
-                : undefined
-            const airHourly = queries.includes('airHourly')
-                ? results[next++] as AirHourlyResponse
-                : undefined
-            const airDaily = queries.includes('airDaily')
-                ? results[next++] as AirDailyResponse
-                : undefined
+            // 单个查询失败不影响其他结果，失败原因汇总到 errors。
+            const settled = await Promise.allSettled(queries.map((query) => this.get<unknown>(...tasks[query])))
+            const results: Partial<Record<QueryType, unknown>> = {}
+            const errors: Partial<Record<QueryType, string>> = {}
+            settled.forEach((item, i) => {
+                if (item.status === 'fulfilled') {
+                    results[queries[i]] = item.value
+                } else {
+                    errors[queries[i]] = item.reason instanceof Error ? item.reason.message : String(item.reason)
+                    if (this.cfg.debug) log.error(item.reason)
+                }
+            })
+            if (!Object.keys(results).length) {
+                throw new Error(Object.entries(errors).map(([query, msg]) => `${query}：${msg}`).join('；'))
+            }
 
-            return JSON.stringify(compact(this.format(city, matched, queries, days, hours, input.limit, coordinates, now, daily, hourly, minutely, airCurrent, airHourly, airDaily)), null, 2)
+            const output = this.format(
+                city,
+                matched,
+                queries,
+                days,
+                hours,
+                input.limit,
+                coordinates,
+                results.weatherNow as NowResponse | undefined,
+                results.weatherDaily as DailyResponse | undefined,
+                results.weatherHourly as HourlyResponse | undefined,
+                results.minutelyPrecipitation as MinutelyResponse | undefined,
+                results.airCurrent as AirCurrentResponse | undefined,
+                results.airHourly as AirHourlyResponse | undefined,
+                results.airDaily as AirDailyResponse | undefined
+            )
+            return JSON.stringify(compact({ ...output, errors: Object.keys(errors).length ? errors : undefined }), null, 2)
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err)
             if (this.cfg.debug) {
@@ -346,8 +324,10 @@ class QWeatherTool extends StructuredTool {
         const dailyLimit = Math.min(limit || this.cfg.defaultDailyLimit, daily?.daily.length || 0)
         const hourlyLimit = Math.min(limit || this.cfg.defaultHourlyLimit, hourly?.hourly.length || 0)
         const minutelyLimit = Math.min(limit || 24, minutely?.minutely.length || 0)
-        const airHourlyLimit = Math.min(limit || 24, airHourly?.hours?.length || 0)
-        const airDailyLimit = Math.min(limit || 3, airDaily?.days?.length || 0)
+        const airHourlyItems = airHourly?.hours || []
+        const airDailyItems = airDaily?.days || []
+        const airHourlyLimit = Math.min(limit || 24, airHourlyItems.length)
+        const airDailyLimit = Math.min(limit || 3, airDailyItems.length)
 
         return {
             location: {
@@ -476,7 +456,7 @@ class QWeatherTool extends StructuredTool {
                     truncated: minutelyLimit < minutely.minutely.length,
                     items: minutely.minutely.slice(0, minutelyLimit).map((item) => ({
                         time: item.fxTime,
-                        precip: `${item.precip}${units.precip}`,
+                        precip: `${item.precip}mm`,
                         type: item.type
                     })),
                     link: minutely.fxLink
@@ -489,24 +469,24 @@ class QWeatherTool extends StructuredTool {
                     stations: airCurrent.stations
                 }
                 : undefined,
-            airHourly: airHourly?.hours
+            airHourly: airHourly
                 ? {
                     returned: airHourlyLimit,
-                    total: airHourly.hours.length,
-                    truncated: airHourlyLimit < airHourly.hours.length,
-                    items: airHourly.hours.slice(0, airHourlyLimit).map((item) => ({
+                    total: airHourlyItems.length,
+                    truncated: airHourlyLimit < airHourlyItems.length,
+                    items: airHourlyItems.slice(0, airHourlyLimit).map((item) => ({
                         time: item.forecastTime,
                         indexes: formatAirIndexes(item.indexes),
                         pollutants: formatAirPollutants(item.pollutants)
                     }))
                 }
                 : undefined,
-            airDaily: airDaily?.days
+            airDaily: airDaily
                 ? {
                     returned: airDailyLimit,
-                    total: airDaily.days.length,
-                    truncated: airDailyLimit < airDaily.days.length,
-                    items: airDaily.days.slice(0, airDailyLimit).map((item) => ({
+                    total: airDailyItems.length,
+                    truncated: airDailyLimit < airDailyItems.length,
+                    items: airDailyItems.slice(0, airDailyLimit).map((item) => ({
                         startTime: item.forecastStartTime,
                         endTime: item.forecastEndTime,
                         indexes: formatAirIndexes(item.indexes),
@@ -539,9 +519,12 @@ class QWeatherTool extends StructuredTool {
             headers,
             signal: AbortSignal.timeout(this.cfg.timeoutSeconds * 1000)
         }, this.cfg)
-        const data = await response.json() as T & { code?: string }
+        const data = await response.json().catch(() => ({})) as T & { code?: string, error?: { title?: string, detail?: string } }
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}${data.code ? `，和风天气状态码 ${data.code}` : ''}`)
+            const detail = data.error
+                ? `，${data.error.title ?? ''}：${data.error.detail ?? ''}`
+                : data.code ? `，和风天气状态码 ${data.code}` : ''
+            throw new Error(`HTTP ${response.status}${detail}`)
         }
         if (data.code && data.code !== '200') {
             throw new Error(`和风天气状态码 ${data.code}`)
@@ -584,15 +567,6 @@ function compact(value: unknown): unknown {
 function normalizeQueries(input: QueryType[] | undefined, defaults: QueryType[] | undefined): QueryType[] {
     const queries: QueryType[] = input?.length ? input : defaults?.length ? defaults : ['weatherNow']
     return Array.from(new Set(queries))
-}
-
-function getCoordinates(input: string, matched: LocationItem): Coordinates {
-    const parsed = parseCoordinates(input)
-    if (parsed) return parsed
-    return {
-        lat: formatCoordinate(matched.lat),
-        lon: formatCoordinate(matched.lon)
-    }
 }
 
 function parseCoordinates(input: string): Coordinates | undefined {
