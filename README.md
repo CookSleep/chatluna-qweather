@@ -2,12 +2,12 @@
 
 # ChatLuna QWeather
 
-[![npm](https://img.shields.io/npm/v/koishi-plugin-chatluna-qweather?style=flat-square)](https://www.npmjs.com/package/koishi-plugin-chatluna-qweather)
+[![npm](https://img.shields.io/npm/v/chatluna-plugin-qweather?style=flat-square)](https://www.npmjs.com/package/chatluna-plugin-qweather)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square)](LICENSE)
 
 **让 ChatLuna 查和风天气**
 
-为 [ChatLuna](https://github.com/ChatLunaLab/chatluna) 提供一个 `qweather` 工具，模型只需给出地点和想查的内容。<br>
+为 [ChatLuna v2](https://github.com/ChatLunaLab/v2) 提供一个 `qweather` 工具，模型只需给出地点和想查的内容。<br>
 支持实时天气、逐日与逐小时预报、分钟级降水和空气质量，数据来自[和风天气](https://www.qweather.com/)。
 
 </div>
@@ -40,15 +40,15 @@
 
 ## ✅ 前置条件
 
-- Koishi，以及已安装的 [ChatLuna](https://github.com/ChatLunaLab/chatluna)（`koishi-plugin-chatluna` 1.3.36 及以上）。
+- [ChatLuna v2](https://github.com/ChatLunaLab/v2)。
 - 和风天气账号、API Host，以及 JWT 或 API KEY 中的一种认证方式（推荐 JWT）。
 
 ## 📦 安装
 
-在 Koishi 控制台的插件市场中搜索 `chatluna-qweather` 安装，或在 Koishi 项目目录中运行：
+在 ChatLuna 控制台的插件市场中搜索 `chatluna-plugin-qweather` 安装，或在 ChatLuna 实例目录中运行：
 
 ```bash
-npm install koishi-plugin-chatluna-qweather
+npm install chatluna-plugin-qweather
 ```
 
 ## 🔑 配置认证
@@ -74,7 +74,7 @@ npm install koishi-plugin-chatluna-qweather
 
 | 配置项 | 说明 |
 | --- | --- |
-| `tool` | 是否注册工具、工具名（默认 `qweather`）、工具描述。 |
+| `tool` | 工具名（默认 `qweather`）、工具描述。 |
 | `apiHost`、`authType` 及认证字段 | 见上一节。 |
 | `lang` | 和风天气多语言代码，默认 `zh`。 |
 | `unit` | `m` 公制（默认）或 `i` 英制。 |
@@ -84,8 +84,6 @@ npm install koishi-plugin-chatluna-qweather
 | `defaultDailyDays`、`defaultHourlyHours` | 默认逐日预报天数（7 天）与逐小时预报小时数（24 小时）。 |
 | `defaultDailyLimit`、`defaultHourlyLimit` | 模型未指定 `limit` 时返回的逐日（7 条）、逐小时（24 条）预报条数。 |
 | `includeOtherLocations` | 是否在结果中附上其他候选城市，默认开启。 |
-| `proxyMode` | 代理：沿用 ChatLuna 的全局代理（默认）、禁用，或使用 `proxyAddress` 指定的代理。 |
-| `debug` | 输出调试日志。 |
 
 ## 💰 价格参考
 
@@ -106,6 +104,18 @@ npm install koishi-plugin-chatluna-qweather
 - 插件不缓存 GeoAPI、城市、经纬度、天气或空气质量的响应，每次调用都重新请求和风天气接口，以免违反和风天气服务条款中关于 Geo 数据缓存与再分发的限制。
 - 只在内存中短期复用 JWT Token，其中不含任何地理或天气数据。
 
+## 🛠️ 开发
+
+`@chatluna/*` 依赖尚未发布到 npm，需在 [ChatLuna v2](https://github.com/ChatLunaLab/v2) 仓库的 `external/` 下构建：
+
+```bash
+git clone -b v2 https://github.com/CookSleep/chatluna-qweather.git external/qweather
+yarn install
+yarn yakumo build chatluna-plugin-qweather
+```
+
+`v2` 分支为 ChatLuna v2 版本（`chatluna-plugin-qweather`），`main` 分支为 Koishi 版本（`koishi-plugin-chatluna-qweather`）。
+
 ## ⚠️ 使用声明
 
 - 本项目仅供学习、研究与合规开发使用。
@@ -118,6 +128,5 @@ npm install koishi-plugin-chatluna-qweather
 
 ## 🙏 致谢
 
-- [ChatLuna](https://github.com/ChatLunaLab/chatluna)：插件所扩展的 Koishi 大模型对话框架。
-- [Koishi](https://koishi.chat/)：机器人框架。
+- [ChatLuna](https://github.com/ChatLunaLab/v2)：插件所扩展的大模型对话框架。
 - [和风天气](https://www.qweather.com/)：提供 GeoAPI、天气与空气质量接口。
