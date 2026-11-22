@@ -118,7 +118,7 @@ git -C host checkout --detach FETCH_HEAD
 bash scripts/pack.sh host release
 ```
 
-向 `v2` 提交或创建 PR 时，GitHub Actions 使用固定版本的 TypeScript 从源码重建 JS 和类型声明，与通过上述 V2 集成测试的提交产物逐文件比对，再打包发布。正式发布时，给已进入 `v2` 的提交打上与包版本相符的标签，例如 `v2-0.2.0`。发布任务通过 npm Trusted Publishing 上传同一个压缩包。npm 端的授权需对应本仓库的 `publish.yml`。
+向 `v2` 提交或创建 PR 时，GitHub Actions 使用固定版本的 TypeScript 从源码重建 JS 和类型声明，与通过上述 V2 集成测试的提交产物逐文件比对，再打包发布。正式发布时，给已进入 `v2` 的提交打上与包版本相符的标签，例如 `v2-0.1.0`。发布任务通过 npm Trusted Publishing 上传同一个压缩包。npm 端的授权需对应本仓库的 `publish.yml`。
 
 ## ⚠️ 使用声明
 
