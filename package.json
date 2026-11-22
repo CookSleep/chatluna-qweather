@@ -1,6 +1,6 @@
 {
   "name": "chatluna-plugin-qweather",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "和风天气查询工具：城市搜索、实时天气、逐日/逐小时预报、分钟级降水与空气质量",
   "type": "module",
   "license": "GPL-3.0-only",

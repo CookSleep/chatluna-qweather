@@ -52,7 +52,7 @@ const QueryTypeSchema = Schema.union([
 ])
 
 export interface Config {
-  tool: { name: string; description: string }
+  tool: { enabled: boolean; name: string; description: string }
   apiHost: string
   authType: 'apiKey' | 'jwt'
   apiKey: string
@@ -75,6 +75,7 @@ export interface Config {
 export const Config: Schema<Config> = Schema.intersect([
   Schema.object({
     tool: Schema.object({
+      enabled: Schema.boolean().default(true).description('注册天气查询工具'),
       name: Schema.string().default('qweather').description('工具名称'),
       description: Schema.string()
         .default('查询天气，输入城市名、LocationID 或经纬度，返回城市匹配、天气预报、分钟级降水或空气质量。')
@@ -173,6 +174,7 @@ const ARGS = Schema.object({
 })
 
 export function apply(ctx: Context, config: Config) {
+  if (!config.tool.enabled) return
   let token: { value: string; expiresAt: number } | undefined
 
   const authorization = (): Record<string, string> => {
@@ -226,6 +228,7 @@ export function apply(ctx: Context, config: Config) {
       async run(args, { signal }) {
         const get = <T>(path: string, params: Record<string, string | undefined>) => request<T>(signal, path, params)
         const queries = [...new Set(args.queries?.length ? args.queries : config.defaultQueries)]
+        if (!queries.length) queries.push('weatherNow')
         const days = args.days ?? config.defaultDailyDays
         const hours = args.hours ?? config.defaultHourlyHours
         const point = parseCoordinates(args.location)

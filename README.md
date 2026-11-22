@@ -74,7 +74,7 @@ npm install chatluna-plugin-qweather
 
 | 配置项 | 说明 |
 | --- | --- |
-| `tool` | 工具名（默认 `qweather`）、工具描述。 |
+| `tool` | 是否注册工具（默认开启）、工具名（默认 `qweather`）、工具描述。 |
 | `apiHost`、`authType` 及认证字段 | 见上一节。 |
 | `lang` | 和风天气多语言代码，默认 `zh`。 |
 | `unit` | `m` 公制（默认）或 `i` 英制。 |

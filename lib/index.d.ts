@@ -8,6 +8,7 @@ type DailyDays = '3d' | '7d' | '10d' | '15d' | '30d';
 type HourlyHours = '24h' | '72h' | '168h';
 export interface Config {
     tool: {
+        enabled: boolean;
         name: string;
         description: string;
     };

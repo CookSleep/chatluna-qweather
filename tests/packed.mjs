@@ -3,13 +3,17 @@ import { test } from 'node:test'
 import { toolSpec } from '@chatluna/tool'
 import { apply, Config } from 'chatluna-plugin-qweather'
 
-function register(http) {
+function register(http, options = {}) {
   let tool
   apply({ tools: { define(value) { tool = value } }, http }, Config({
-    apiHost: 'weather.example', authType: 'apiKey', apiKey: 'test'
+    apiHost: 'weather.example', authType: 'apiKey', apiKey: 'test', ...options
   }))
   return tool
 }
+
+test('关闭工具时不注册天气查询', () => {
+  assert.equal(register(() => assert.fail('不应发送请求'), { tool: { enabled: false } }), undefined)
+})
 
 const city = { location: [{ name: '北京', id: '101010100', lat: '39.90', lon: '116.40' }] }
 
@@ -32,6 +36,17 @@ test('只传城市名时查询实时天气，单项失败时保留其他结果',
   const partial = await tool.run({ ...args, queries: ['weatherNow', 'airDaily'] }, controller)
   assert.ok(partial.now)
   assert.match(partial.errors.airDaily, /403/)
+})
+
+test('清空默认查询后，只给城市仍查实时天气', async () => {
+  const tool = register(async url => {
+    if (url.pathname.startsWith('/geo/')) return Response.json(city)
+    assert.equal(url.pathname, '/v7/weather/now')
+    return Response.json({ now: { temp: '12' } })
+  }, { defaultQueries: [] })
+  const result = await tool.run(tool.args({ location: '北京' }), new AbortController())
+  assert.deepEqual(result.query.queries, ['weatherNow'])
+  assert.equal(result.now.temp, '12°C')
 })
 
 for (const phase of ['城市查询', '并行天气和空气质量查询']) {
