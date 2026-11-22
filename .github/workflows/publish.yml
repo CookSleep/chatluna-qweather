@@ -5,7 +5,7 @@ on:
     branches: [v2]
   push:
     branches: [v2]
-    tags: ['qweather-v2-*']
+    tags: ['v2-*']
 
 permissions:
   contents: read
@@ -24,7 +24,7 @@ jobs:
         run: |
           test "$(node -p "require('./package.json').name")" = chatluna-plugin-qweather
           if [[ "$GITHUB_REF_TYPE" == tag ]]; then
-            test "$GITHUB_REF_NAME" = "qweather-v2-$(node -p "require('./package.json').version")"
+            test "$GITHUB_REF_NAME" = "v2-$(node -p "require('./package.json').version")"
             git merge-base --is-ancestor HEAD origin/v2
           fi
       - uses: actions/checkout@v4
