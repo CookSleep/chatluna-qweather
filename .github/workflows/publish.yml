@@ -58,4 +58,4 @@ jobs:
         with:
           name: npm-package
           path: release
-      - run: npm publish release/*.tgz --access public --provenance
+      - run: npm publish ./release/*.tgz --access public --provenance
