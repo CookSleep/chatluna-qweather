@@ -21,11 +21,11 @@ import {
   type MinutelyResponse,
   type NowResponse,
   type Units
-} from './format'
+} from './format.js'
 
 export const name = 'chatluna-qweather'
 
-export { usage } from './usage'
+export { usage } from './usage.js'
 
 const QUERY_TYPES = [
   'weatherNow',
@@ -188,15 +188,18 @@ export function apply(ctx: Context, config: Config) {
     return { Authorization: `Bearer ${token.value}` }
   }
 
-  const get = async <T>(path: string, params: Record<string, string | undefined>): Promise<T> => {
+  const request = async <T>(signal: AbortSignal, path: string, params: Record<string, string | undefined>): Promise<T> => {
+    signal.throwIfAborted()
     const url = new URL(`https://${config.apiHost.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '')}${path}`)
     for (const [key, value] of Object.entries(params)) if (value) url.searchParams.set(key, value)
     const response = await ctx.http(url, {
+      signal,
       headers: { Accept: 'application/json', ...authorization() },
       timeout: config.timeoutSeconds * 1000,
       validateStatus: () => true
     })
     const data: unknown = await response.json().catch(() => ({}))
+    signal.throwIfAborted()
     const record = typeof data === 'object' && data !== null ? data : {}
     const code = 'code' in record ? String(record.code) : undefined
     if (!response.ok) {
@@ -220,7 +223,8 @@ export function apply(ctx: Context, config: Config) {
       description: config.tool.description,
       args: ARGS,
       traits: { effect: 'read', parallel: true },
-      async run(args) {
+      async run(args, { signal }) {
+        const get = <T>(path: string, params: Record<string, string | undefined>) => request<T>(signal, path, params)
         const queries = [...new Set(args.queries?.length ? args.queries : config.defaultQueries)]
         const days = args.days ?? config.defaultDailyDays
         const hours = args.hours ?? config.defaultHourlyHours
@@ -299,6 +303,7 @@ export function apply(ctx: Context, config: Config) {
 
         // One failed query does not hide the others; its reason goes to errors.
         const settled = await Promise.allSettled(queries.map((query) => tasks[query]()))
+        signal.throwIfAborted()
         const results: Record<string, unknown> = {}
         const errors: Record<string, string> = {}
         settled.forEach((item, index) => {

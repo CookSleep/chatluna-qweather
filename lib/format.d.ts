@@ -340,4 +340,3 @@ export declare function formatAirDaily(data: AirDailyResponse, limit: number): {
     }[];
 };
 export {};
-//# sourceMappingURL=format.d.ts.map

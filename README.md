@@ -106,15 +106,19 @@ npm install chatluna-plugin-qweather
 
 ## 🛠️ 开发
 
-`@chatluna/*` 依赖尚未发布到 npm，需在 [ChatLuna v2](https://github.com/ChatLunaLab/v2) 仓库的 `external/` 下构建：
+V1 在 `main` 分支维护，npm 包名为 `koishi-plugin-chatluna-qweather`。V2 在 `v2` 分支维护，包名为 `chatluna-plugin-qweather`。
+
+在 V2 插件仓库根目录运行以下命令，使用 Node.js 24.22.1 和固定版本的 ChatLuna 工作区生成并测试 npm 压缩包：
 
 ```bash
-git clone -b v2 https://github.com/CookSleep/chatluna-qweather.git external/qweather
-yarn install
-yarn yakumo build chatluna-plugin-qweather
+git init host
+git -C host fetch --depth=1 https://github.com/ChatLunaLab/v2-mirror.git 3684386fb392ae4fe9ac78dade54d7d0a458b585
+git -C host checkout --detach FETCH_HEAD
+(cd host && node .yarn/releases/yarn-4.18.1.cjs install --immutable)
+bash scripts/pack.sh host release
 ```
 
-`v2` 分支为 ChatLuna v2 版本（`chatluna-plugin-qweather`），`main` 分支为 Koishi 版本（`koishi-plugin-chatluna-qweather`）。
+向 `v2` 提交或创建 PR 时，GitHub Actions 会从源码构建并测试压缩包。正式发布时，给已进入 `v2` 的提交打上与包版本相符的标签，例如 `qweather-v2-0.2.0`。发布任务通过 npm Trusted Publishing 上传同一个压缩包。npm 端的授权需对应本仓库的 `publish.yml`。
 
 ## ⚠️ 使用声明
 

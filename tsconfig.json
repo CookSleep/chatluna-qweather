@@ -2,8 +2,12 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "lib"
+    "outDir": "lib",
+    "composite": false,
+    "incremental": false,
+    "emitDeclarationOnly": false,
+    "declarationMap": false,
+    "sourceMap": false
   },
-  "include": ["src"],
-  "references": [{ "path": "../../packages/core/schema" }, { "path": "../../packages/tool/core" }]
+  "include": ["src"]
 }

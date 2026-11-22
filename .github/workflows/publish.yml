@@ -1,31 +1,63 @@
-name: Publish Package
+name: 构建与发布 V2 插件
 
 on:
+  pull_request:
+    branches: [v2]
   push:
-    tags:
-      - 'v*'
+    branches: [v2]
+    tags: ['qweather-v2-*']
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
-  publish:
+  pack:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
         with:
-          node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Show tool versions
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+      - name: 校验包名、版本和发布分支
         run: |
-          node --version
-          npm --version
+          test "$(node -p "require('./package.json').name")" = chatluna-plugin-qweather
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            test "$GITHUB_REF_NAME" = "qweather-v2-$(node -p "require('./package.json').version")"
+            git merge-base --is-ancestor HEAD origin/v2
+          fi
+      - uses: actions/checkout@v4
+        with:
+          repository: ChatLunaLab/v2-mirror
+          ref: 3684386fb392ae4fe9ac78dade54d7d0a458b585
+          path: host
+          persist-credentials: false
+      - name: 安装锁定依赖
+        working-directory: host
+        run: node .yarn/releases/yarn-4.18.1.cjs install --immutable
+      - name: 从源码构建并测试压缩包
+        run: bash scripts/pack.sh host release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: npm-package
+          path: release/*.tgz
+          if-no-files-found: error
 
-      - name: Publish to npm (Trusted Publishing via OIDC)
-        run: npm publish --access public --provenance
+  publish:
+    if: github.ref_type == 'tag'
+    needs: pack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-package
+          path: release
+      - run: npm publish release/*.tgz --access public --provenance

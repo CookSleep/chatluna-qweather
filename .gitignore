@@ -1,3 +1,5 @@
 node_modules/
 *.tgz
 tsconfig.tsbuildinfo
+/host/
+/release/

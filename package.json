@@ -27,8 +27,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -b",
-    "clean": "tsc -b --clean"
+    "build": "tsc -p tsconfig.json"
   },
   "peerDependencies": {
     "@chatluna/schema": "*",
@@ -46,6 +45,13 @@
     "description": {
       "zh": "和风天气查询工具",
       "en": "QWeather lookup tool"
+    },
+    "category": "tool",
+    "service": {
+      "required": [
+        "tools",
+        "http"
+      ]
     }
   },
   "chatluna": {
